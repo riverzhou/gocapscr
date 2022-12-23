@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -38,7 +39,10 @@ func main() {
 }
 
 func readConfig() Config {
-	filePtr, err := os.Open("config.json")
+	cfgPath := path.Join(getExeDir(), "config.json")
+	fmt.Println(cfgPath)
+
+	filePtr, err := os.Open(cfgPath)
 	if err != nil {
 		panic(err)
 	}
@@ -108,4 +112,12 @@ func postFile(fullName string, url string) {
 	}
 
 	fmt.Print(string(resp_body))
+}
+
+func getExeDir() string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		panic(err)
+	}
+	return dir
 }
