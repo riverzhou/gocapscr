@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/png"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path"
@@ -24,7 +25,7 @@ func main() {
 	fmt.Println(dir)
 	for {
 		postFile(screen(dir))
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 120)
 	}
 }
 
@@ -55,24 +56,35 @@ func save(img *image.RGBA, fileName string) {
 
 func postFile(fullName string) {
 	fileName := path.Base((fullName))
-	//这是一个Post 参数会被返回的地址
-	uri := "http://192.168.3.131:8888/" + fileName
-	byte, err := os.ReadFile(fullName)
+
+	url := "http://192.168.3.131:8888/"
+
+	bodyBuffer := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuffer)
+
+	fileWriter, _ := bodyWriter.CreateFormFile("file", fileName)
+
+	file, err := os.Open(fullName)
 	if err != nil {
-		fmt.Println("readFile err=", err)
+		return
 	}
-	res, err := http.Post(uri, "image/png", bytes.NewReader(byte))
+	defer file.Close()
+
+	io.Copy(fileWriter, file)
+
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	resp, err := http.Post(url, contentType, bodyBuffer)
 	if err != nil {
-		fmt.Println("post err=", err)
+		return
 	}
-	//http返回的response的body必须close,否则就会有内存泄露
-	defer func() {
-		res.Body.Close()
-	}()
-	//读取body
-	body, err := io.ReadAll(res.Body)
+	defer resp.Body.Close()
+
+	resp_body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("res err=", err)
+		return
 	}
-	fmt.Print(string(body))
+
+	fmt.Print(string(resp_body))
 }
