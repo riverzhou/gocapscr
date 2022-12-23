@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/png"
@@ -16,7 +17,14 @@ import (
 	"github.com/kbinani/screenshot"
 )
 
+type Config struct {
+	Url      string
+	Interval int
+}
+
 func main() {
+	cfg := readConfig()
+
 	dir, err := os.MkdirTemp("", "capscr_")
 	if err != nil {
 		panic(err)
@@ -24,9 +32,24 @@ func main() {
 	defer os.RemoveAll(dir) // clean up
 	fmt.Println(dir)
 	for {
-		postFile(screen(dir))
-		time.Sleep(time.Second * 120)
+		postFile(screen(dir), cfg.Url)
+		time.Sleep(time.Second * time.Duration(cfg.Interval))
 	}
+}
+
+func readConfig() Config {
+	filePtr, err := os.Open("config.json")
+	if err != nil {
+		panic(err)
+	}
+	defer filePtr.Close()
+	var cfg Config
+	decoder := json.NewDecoder(filePtr)
+	err = decoder.Decode(&cfg)
+	if err != nil {
+		panic(err)
+	}
+	return cfg
 }
 
 func screen(dir string) string {
@@ -54,10 +77,8 @@ func save(img *image.RGBA, fileName string) {
 	png.Encode(file, img)
 }
 
-func postFile(fullName string) {
+func postFile(fullName string, url string) {
 	fileName := path.Base((fullName))
-
-	url := "http://192.168.3.131:8888/"
 
 	bodyBuffer := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuffer)
