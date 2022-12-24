@@ -33,7 +33,10 @@ func main() {
 	defer os.RemoveAll(dir) // clean up
 	fmt.Println(dir)
 	for {
-		postFile(screen(dir), cfg.Url)
+		name, err := capScreen(dir)
+		if err == nil {
+			postFile(name, cfg.Url)
+		}
 		time.Sleep(time.Second * time.Duration(cfg.Interval))
 	}
 }
@@ -56,29 +59,33 @@ func readConfig() Config {
 	return cfg
 }
 
-func screen(dir string) string {
+func capScreen(dir string) (string, error) {
 	//使用 GetDisplayBounds获取指定屏幕显示范围，全屏截图
 	bounds := screenshot.GetDisplayBounds(0)
 	img, err := screenshot.CaptureRect(bounds)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	//拼接图片名
 	t := time.Now().Unix()
 	name := strconv.Itoa(int(t)) + ".png"
 	fullName := path.Join(dir, name)
-	save(img, fullName)
-	return fullName
+	err = saveImage(img, fullName)
+	if err != nil {
+		return "", err
+	}
+	return fullName, nil
 }
 
 // save *image.RGBA to filePath with PNG format.
-func save(img *image.RGBA, fileName string) {
+func saveImage(img *image.RGBA, fileName string) error {
 	file, err := os.Create(fileName)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer file.Close()
 	png.Encode(file, img)
+	return nil
 }
 
 func postFile(fullName string, url string) {
@@ -93,6 +100,7 @@ func postFile(fullName string, url string) {
 	if err != nil {
 		return
 	}
+	defer os.Remove(fullName)
 	defer file.Close()
 
 	io.Copy(fileWriter, file)
