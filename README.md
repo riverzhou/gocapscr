@@ -8,6 +8,9 @@ config.jons文件设置:
     "Interval": 120                     # 时间间隔  
 }  
 
+## 编译
+go build -ldflags -H=windowsgui .
+
 ## 服务器:
 
 https://github.com/codeskyblue/gohttpserver.git  
